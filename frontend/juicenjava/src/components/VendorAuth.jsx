@@ -18,7 +18,7 @@ const VendorAuth = ({ onAuthSuccess, onClose }) => {
 
     try {
       if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: { data: { shop_name: shopName, role: 'vendor' } }
