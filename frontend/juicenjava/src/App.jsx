@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
-import VendorAuth from './components/VendorAuth';
+import AuthModal from './components/AuthModal';
 import VendorDashboard from './components/VendorDashboard';
 import './App.css';
 
@@ -13,17 +13,18 @@ const CURATED_LAGOS_SPOTS = [
 const App = () => {
   const [shops, setShops] = useState(CURATED_LAGOS_SPOTS);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('home'); // 'home' | 'vendor-dashboard'
-  const [showVendorAuth, setShowVendorAuth] = useState(false);
-  const [vendorUser, setVendorUser] = useState(null);
+  const [view, setView] = useState('home');
+  const [authModal, setAuthModal] = useState(null); // { role, mode } | null
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Restore session on load
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) setVendorUser(session.user);
+      if (session?.user) setCurrentUser(session.user);
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setVendorUser(session?.user || null);
+      setCurrentUser(session?.user || null);
+      if (!session?.user) setView('home');
     });
     return () => listener.subscription.unsubscribe();
   }, []);
@@ -44,24 +45,20 @@ const App = () => {
     fetchShops();
   }, []);
 
-  const handleVendorNavClick = () => {
-    if (vendorUser) {
-      setView('vendor-dashboard');
-    } else {
-      setShowVendorAuth(true);
-    }
-  };
-
   const handleAuthSuccess = (user) => {
-    setVendorUser(user);
-    setShowVendorAuth(false);
-    setView('vendor-dashboard');
+    setCurrentUser(user);
+    setAuthModal(null);
+    const role = user?.user_metadata?.role;
+    if (role === 'vendor') setView('vendor-dashboard');
   };
 
-  const handleSignOut = () => {
-    setVendorUser(null);
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setCurrentUser(null);
     setView('home');
   };
+
+  const isVendor = currentUser?.user_metadata?.role === 'vendor';
 
   const categories = [
     { name: 'Coffee', icon: '☕', img: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=800&auto=format&fit=crop' },
@@ -70,18 +67,18 @@ const App = () => {
     { name: 'Fresh Juice', icon: '🍊', img: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=800&auto=format&fit=crop' },
   ];
 
-  // Show vendor dashboard if logged in and on that view
-  if (view === 'vendor-dashboard' && vendorUser) {
-    return <VendorDashboard user={vendorUser} onSignOut={handleSignOut} />;
+  if (view === 'vendor-dashboard' && currentUser && isVendor) {
+    return <VendorDashboard user={currentUser} onSignOut={handleSignOut} />;
   }
 
   return (
     <div className="app-container">
-      {/* Auth Modal */}
-      {showVendorAuth && (
-        <VendorAuth
+      {authModal && (
+        <AuthModal
+          initialRole={authModal.role}
+          initialMode={authModal.mode}
           onAuthSuccess={handleAuthSuccess}
-          onClose={() => setShowVendorAuth(false)}
+          onClose={() => setAuthModal(null)}
         />
       )}
 
@@ -95,19 +92,35 @@ const App = () => {
           <div className="nav-links">
             <a href="#discover" className="nav-link active">📍 Discover</a>
             <a href="#about" className="nav-link">🏪 About</a>
-            <button className="nav-link" style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }} onClick={handleVendorNavClick}>
+            <button
+              className="nav-link"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+              onClick={() => {
+                if (currentUser && isVendor) setView('vendor-dashboard');
+                else setAuthModal({ role: 'vendor', mode: 'login' });
+              }}
+            >
               📊 Vendors
             </button>
           </div>
           <div className="nav-auth">
-            {vendorUser ? (
-              <button className="btn-get-started" onClick={() => setView('vendor-dashboard')}>
-                My Dashboard
-              </button>
+            {currentUser ? (
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                {isVendor && (
+                  <button className="btn-get-started" onClick={() => setView('vendor-dashboard')}>
+                    My Dashboard
+                  </button>
+                )}
+                <button className="btn-sign-in" onClick={handleSignOut}>Sign Out</button>
+              </div>
             ) : (
               <>
-                <button className="btn-sign-in" onClick={() => setShowVendorAuth(true)}>Sign In</button>
-                <button className="btn-get-started" onClick={() => setShowVendorAuth(true)}>Get Started</button>
+                <button className="btn-sign-in" onClick={() => setAuthModal({ role: 'user', mode: 'login' })}>
+                  Sign In
+                </button>
+                <button className="btn-get-started" onClick={() => setAuthModal({ role: 'user', mode: 'signup' })}>
+                  Get Started
+                </button>
               </>
             )}
           </div>
@@ -123,7 +136,9 @@ const App = () => {
             <p className="hero-subtitle">The best coffee shops, tea houses, and juice bars in Lagos. Real reviews, real community.</p>
             <div className="hero-cta">
               <button className="btn-primary">🔍 Start Exploring</button>
-              <button className="btn-secondary" onClick={() => setShowVendorAuth(true)}>List Your Shop →</button>
+              <button className="btn-secondary" onClick={() => setAuthModal({ role: 'vendor', mode: 'signup' })}>
+                List Your Shop →
+              </button>
             </div>
             <div className="hero-stats">
               <div className="stat-item"><span className="stat-number">500+</span><span className="stat-label">Local Shops</span></div>
@@ -167,7 +182,10 @@ const App = () => {
                 <div className="card-image" style={{ backgroundImage: `url(${shop.photo_url || shop.image_url || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800'})` }}>
                   <div className="card-badges">
                     <span className="status-pill open">● Open</span>
-                    <button className="heart-btn">♡</button>
+                    <button
+                      className="heart-btn"
+                      onClick={() => !currentUser && setAuthModal({ role: 'user', mode: 'signup' })}
+                    >♡</button>
                   </div>
                 </div>
                 <div className="card-body">
