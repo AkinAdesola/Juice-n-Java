@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient';
 import AuthModal from './components/AuthModal';
 import VendorDashboard from './components/VendorDashboard';
 import './App.css';
+import ShopsMap from './components/ShopsMap';
 
 const CURATED_LAGOS_SPOTS = [
   { id: "c1", name: "Cafe Neo (Sabo)", category: "coffee", rating: 4.8, review_count: 124, address: "Commercial Ave, Sabo Yaba", photo_url: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80" },
@@ -163,6 +164,8 @@ const App = () => {
           ))}
         </div>
       </section>
+
+      <ShopsMap />
 
       {/* Featured Spots */}
       <section id="discover" className="featured-section">
