@@ -4,6 +4,7 @@ import AuthModal from './components/AuthModal';
 import VendorDashboard from './components/VendorDashboard';
 import './App.css';
 import ShopsMap from './components/ShopsMap';
+import ReviewModal from './components/ReviewModal';
 
 const CURATED_LAGOS_SPOTS = [
   { id: "c1", name: "Cafe Neo (Sabo)", category: "coffee", rating: 4.8, review_count: 124, address: "Commercial Ave, Sabo Yaba", photo_url: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80" },
@@ -17,6 +18,7 @@ const App = () => {
   const [view, setView] = useState('home');
   const [authModal, setAuthModal] = useState(null); // { role, mode } | null
   const [currentUser, setCurrentUser] = useState(null);
+  const [selectedShop, setSelectedShop] = useState(null);
 
   // Restore session on load
   useEffect(() => {
@@ -82,7 +84,13 @@ const App = () => {
           onClose={() => setAuthModal(null)}
         />
       )}
-
+      {selectedShop && (
+        <ReviewModal
+          shop={selectedShop}
+          user={currentUser}
+          onClose={() => setSelectedShop(null)}
+        />
+      )}
       {/* Navigation */}
       <nav className="navbar">
         <div className="nav-content">
@@ -181,7 +189,7 @@ const App = () => {
             <div className="loading-spinner">Fetching the best of Lagos...</div>
           ) : (
             shops.map((shop) => (
-              <div key={shop.id || shop._id} className="shop-card">
+              <div key={shop.id || shop._id} className="shop-card" onClick={() => setSelectedShop(shop)} style={{ cursor: 'pointer' }}>
                 <div className="card-image" style={{ backgroundImage: `url(${shop.photo_url || shop.image_url || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800'})` }}>
                   <div className="card-badges">
                     <span className="status-pill open">● Open</span>
