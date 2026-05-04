@@ -3,7 +3,6 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix Leaflet default marker icon broken by webpack
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -14,56 +13,39 @@ L.Icon.Default.mergeOptions({
 const vendorIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
 });
 
 const communityIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
 });
 
 const LAGOS_CENTER = [6.4550, 3.3841];
+const API = 'https://juice-n-java-production.up.railway.app/api';
 
 const ShopsMap = () => {
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [userCoords, setUserCoords] = useState(LAGOS_CENTER);
 
   useEffect(() => {
-    // Try to get user location, fall back to Lagos center
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserCoords([pos.coords.latitude, pos.coords.longitude]),
-        () => setUserCoords(LAGOS_CENTER)
-      );
-    }
+    // Always fetch with Lagos center immediately — don't wait for geolocation
+    fetchShops(LAGOS_CENTER[0], LAGOS_CENTER[1]);
   }, []);
 
-  useEffect(() => {
-    const fetchShops = async () => {
-      try {
-        const [lat, lng] = userCoords;
-        const res = await fetch(
-          `https://juice-n-java-production.up.railway.app/api/shops/discover?lat=${lat}&lng=${lng}&radius=15`
-        );
-        const data = await res.json();
-        setShops(data.shops || []);
-      } catch (err) {
-        setError('Could not load map data.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchShops();
-  }, [userCoords]);
+  const fetchShops = async (lat, lng) => {
+    try {
+      const res = await fetch(`${API}/shops/discover?lat=${lat}&lng=${lng}&radius=20`);
+      const data = await res.json();
+      setShops(data.shops || []);
+    } catch (err) {
+      setError('Could not load map data.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={styles.wrapper}>
@@ -71,7 +53,7 @@ const ShopsMap = () => {
         <div>
           <h2 style={styles.title}>Explore on the Map</h2>
           <p style={styles.subtitle}>
-            {loading ? 'Loading shops...' : `${shops.length} spots near you`}
+            {loading ? 'Loading shops...' : `${shops.length} spots in Lagos`}
           </p>
         </div>
         <div style={styles.legend}>
@@ -89,7 +71,7 @@ const ShopsMap = () => {
       <div style={styles.mapWrapper}>
         {!loading && (
           <MapContainer
-            center={userCoords}
+            center={LAGOS_CENTER}
             zoom={13}
             style={{ height: '100%', width: '100%', borderRadius: '16px' }}
             scrollWheelZoom={false}
@@ -136,55 +118,21 @@ const ShopsMap = () => {
 };
 
 const styles = {
-  wrapper: {
-    padding: '3rem 2rem',
-    background: '#FAF7F2',
-    fontFamily: "'DM Sans', sans-serif",
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '1.5rem',
-    flexWrap: 'wrap',
-    gap: '1rem',
-  },
-  title: {
-    fontSize: '24px',
-    fontWeight: '600',
-    color: '#1C1009',
-    margin: '0 0 4px',
-    fontFamily: "'DM Serif Display', serif",
-  },
-  subtitle: { fontSize: '14px', color: '#888', margin: 0 },
+  wrapper: { padding: '3rem 5%', background: '#FAF7F2', fontFamily: "'DM Sans', sans-serif" },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' },
+  title: { fontSize: '2rem', fontWeight: '400', color: '#1C1009', margin: '0 0 4px', fontFamily: "'DM Serif Display', serif", letterSpacing: '-0.5px' },
+  subtitle: { fontSize: '14px', color: '#8B7355', margin: 0 },
   legend: { display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' },
   legendItem: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#555' },
   legendDot: { width: '10px', height: '10px', borderRadius: '50%', display: 'inline-block' },
-  mapWrapper: {
-    height: '480px',
-    borderRadius: '16px',
-    overflow: 'hidden',
-    border: '0.5px solid #E0D8CC',
-    position: 'relative',
-  },
-  loadingOverlay: {
-    height: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: '#F5F0E8',
-  },
+  mapWrapper: { height: '480px', borderRadius: '24px', overflow: 'hidden', border: '1px solid #E8E0D4', position: 'relative' },
+  loadingOverlay: { height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F0E8' },
   loadingText: { fontSize: '16px', color: '#888' },
   error: { fontSize: '14px', color: '#C0392B', marginBottom: '1rem' },
   popup: { fontFamily: "'DM Sans', sans-serif", minWidth: '160px' },
   popupName: { fontWeight: '600', fontSize: '14px', color: '#1C1009', margin: '0 0 6px' },
   popupDetail: { fontSize: '12px', color: '#555', margin: '2px 0' },
-  verifiedBadge: {
-    display: 'inline-block', marginTop: '6px',
-    background: '#FEF3E2', color: '#C47A2B',
-    fontSize: '11px', fontWeight: '600',
-    padding: '2px 8px', borderRadius: '12px',
-  },
+  verifiedBadge: { display: 'inline-block', marginTop: '6px', background: '#FEF3E2', color: '#C47A2B', fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '12px' },
 };
 
 export default ShopsMap;
