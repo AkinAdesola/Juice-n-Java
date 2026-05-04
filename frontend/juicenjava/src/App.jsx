@@ -8,7 +8,7 @@ import ReviewModal from './components/ReviewModal';
 
 const CURATED_LAGOS_SPOTS = [
   { id: "c1", name: "Cafe Neo (Sabo)", category: "coffee", rating: 4.8, review_count: 124, address: "Commercial Ave, Sabo Yaba", photo_url: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80" },
-  { id: "c2", name: "Vibe by Caliente", category: "juice", rating: 4.5, review_count: 89, address: "Yaba, Lagos", photo_url: "https://images.unsplash.com/photo-1622597467827-439933bc3956?w=600&q=80" },
+  { id: "c2", name: "Vibe by Caliente", category: "juice", rating: 4.5, review_count: 89, address: "Yaba, Lagos", photo_url: "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=600&q=80" },
   { id: "c3", name: "My Coffee Lagos", category: "coffee", rating: 4.7, review_count: 56, address: "Yaba Tech Area", photo_url: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80" },
 ];
 
