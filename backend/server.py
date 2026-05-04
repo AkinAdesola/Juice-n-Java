@@ -6,20 +6,19 @@ from fastapi import FastAPI, APIRouter, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
+from datetime import datetime
 import httpx
 import logging
 import stripe
 
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://juice-n-java.vercel.app")
-
 PRICE_IDS = {
     "usd": "price_1TPlUzEhvCgzDmTejr4dFmIB",
     "ngn": "price_1TQ7VLEhvCgzDmTeRDdElnyU",
 }
 
 app = FastAPI(title="Juice n Java API")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://juice-n-java.vercel.app", "http://localhost:3000"],
@@ -78,7 +77,6 @@ async def discover_shops(lat: float, lng: float, radius: float = 5.0, drink_type
             db.shops.find(query, {"_id": 0}).to_list(100),
             timeout=3.0
         )
-        logging.warning(f"MongoDB returned {len(vendors)} vendors")
         for s in vendors:
             d = haversine_distance(lat, lng, s["latitude"], s["longitude"])
             if d <= radius:
@@ -87,18 +85,77 @@ async def discover_shops(lat: float, lng: float, radius: float = 5.0, drink_type
                 vendor_list.append(s)
     except Exception as e:
         logging.warning(f"DB unavailable: {e}")
-
     external = await fetch_external_shops(lat, lng, radius)
-
     if not external and not vendor_list:
-        logging.warning("Using fallback data")
         for shop in FALLBACK_SHOPS:
             shop["distance"] = round(haversine_distance(lat, lng, shop["latitude"], shop["longitude"]), 2)
         external = sorted(FALLBACK_SHOPS, key=lambda x: x["distance"])
-
     combined = sorted(vendor_list + external, key=lambda x: x["distance"])
     return {"shops": combined, "total": len(combined), "address_coords": [lat, lng]}
 
+# ── REVIEWS ─────────────────────────────────────────────────
+
+class ReviewCreate(BaseModel):
+    shop_name: str
+    user_id: str
+    user_email: str
+    user_name: str
+    rating: int
+    comment: str
+
+@api_router.post("/reviews")
+async def create_review(review: ReviewCreate):
+    if not 1 <= review.rating <= 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+    if not review.comment.strip():
+        raise HTTPException(status_code=400, detail="Comment cannot be empty")
+
+    # Check if user already reviewed this shop
+    existing = await db.reviews.find_one({
+        "shop_name": review.shop_name,
+        "user_id": review.user_id
+    })
+    if existing:
+        raise HTTPException(status_code=409, detail="You have already reviewed this shop")
+
+    doc = {
+        "shop_name": review.shop_name,
+        "user_id": review.user_id,
+        "user_email": review.user_email,
+        "user_name": review.user_name,
+        "rating": review.rating,
+        "comment": review.comment.strip(),
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    await db.reviews.insert_one(doc)
+
+    # Update shop's average rating and review count
+    all_reviews = await db.reviews.find(
+        {"shop_name": review.shop_name}, {"rating": 1}
+    ).to_list(1000)
+    avg = round(sum(r["rating"] for r in all_reviews) / len(all_reviews), 1)
+    await db.shops.update_one(
+        {"name": review.shop_name},
+        {"$set": {"rating": avg, "review_count": len(all_reviews)}}
+    )
+
+    return {"message": "Review submitted", "rating": review.rating}
+
+@api_router.get("/reviews/{shop_name}")
+async def get_reviews(shop_name: str):
+    reviews = await db.reviews.find(
+        {"shop_name": shop_name},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    avg = round(sum(r["rating"] for r in reviews) / len(reviews), 1) if reviews else 0
+    return {
+        "shop_name": shop_name,
+        "reviews": reviews,
+        "total": len(reviews),
+        "average_rating": avg
+    }
+
+# ── STRIPE ──────────────────────────────────────────────────
 
 class CheckoutRequest(BaseModel):
     currency: str
