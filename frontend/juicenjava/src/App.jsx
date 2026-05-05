@@ -172,7 +172,7 @@ function ShopModal({ shop, user, onClose, saved, onSave }) {
               {[
                 { icon: '🕐', label: 'HOURS', value: shop.hours || 'Mon-Sun 8am-9pm' },
                 { icon: '📍', label: 'ADDRESS', value: shop.address },
-                { icon: '📞', label: 'PHONE', value: shop.phone || 'N/A' },
+                { icon: '📞', label: 'PHONE', value: shop.phone ? <a href={`tel:${shop.phone}`} style={{color:'var(--amber)',textDecoration:'none'}}>{shop.phone}</a> : 'N/A' },
               ].map(({ icon, label, value }) => (
                 <div key={label} className="info-row">
                   <span className="info-icon">{icon}</span>
@@ -190,6 +190,18 @@ function ShopModal({ shop, user, onClose, saved, onSave }) {
                   </div>
                 </div>
               )}
+              <button
+                className="btn btn-ghost"
+                style={{ width: '100%', justifyContent: 'center', marginTop: 20 }}
+                onClick={() => {
+                  const dest = shop.latitude && shop.longitude
+                    ? `${shop.latitude},${shop.longitude}`
+                    : encodeURIComponent((shop.address || shop.name) + ' Lagos Nigeria');
+                  window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
+                }}
+              >
+                🗺 Get Directions on Google Maps
+              </button>
             </div>
           )}
         </div>
