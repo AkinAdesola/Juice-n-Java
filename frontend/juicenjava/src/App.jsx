@@ -487,7 +487,7 @@ const App = () => {
           <span className="navbar-name">Juice'n'Java</span>
         </div>
         <div className="navbar-links">
-          <button className={`navbar-link ${view === 'home' ? 'active' : ''}`} onClick={() => setView('home')}>📍 Discover</button>
+          <button className={`navbar-link ${view === 'discover' ? 'active' : ''}`} onClick={() => setView('discover')}>📍 Discover</button>
           <a href="#about" className="navbar-link">🏪 About</a>
           <button className="navbar-link" onClick={() => { if (currentUser && isVendor) setView('vendor-dashboard'); else setAuthModal({ role: 'vendor', mode: 'login' }); }}>📊 Vendors</button>
         </div>
