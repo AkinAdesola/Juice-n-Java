@@ -9,6 +9,38 @@ const VendorDashboard = ({ user, onSignOut }) => {
   const [checkoutError, setCheckoutError] = useState('');
 
   const shopName = user?.user_metadata?.shop_name || 'Your Shop';
+  const [placeId, setPlaceId] = useState('');
+  const [shopPhone, setShopPhone] = useState('');
+  const [shopHours, setShopHours] = useState('');
+  const [shopAddress, setShopAddress] = useState('');
+  const [listingSaving, setListingSaving] = useState(false);
+  const [listingMsg, setListingMsg] = useState('');
+
+  const saveListingDetails = async () => {
+    setListingSaving(true);
+    setListingMsg('');
+    try {
+      const res = await fetch('https://juice-n-java-production.up.railway.app/api/vendor/update-shop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shop_name: shopName,
+          vendor_email: user.email,
+          google_place_id: placeId || undefined,
+          address: shopAddress || undefined,
+          phone: shopPhone || undefined,
+          hours: shopHours || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to save');
+      setListingMsg('Listing updated successfully!');
+    } catch (err) {
+      setListingMsg('Error: ' + err.message);
+    } finally {
+      setListingSaving(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -34,7 +66,7 @@ const VendorDashboard = ({ user, onSignOut }) => {
 
   const plan = PLANS[selectedCurrency];
 
-  const tabs = ['overview', 'pricing', 'analytics'];
+  const tabs = ['overview', 'listing', 'pricing', 'analytics'];
 
   return (
     <div style={styles.wrap}>
@@ -60,7 +92,7 @@ const VendorDashboard = ({ user, onSignOut }) => {
               style={{ ...styles.navBtn, ...(activeTab === tab ? styles.navBtnActive : {}) }}
               onClick={() => setActiveTab(tab)}
             >
-              {tab === 'overview' && '📊 '}
+              {tab === 'overview' && '📊 '}{tab === 'listing' && '🏪 '}
               {tab === 'pricing' && '💳 '}
               {tab === 'analytics' && '📈 '}
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -175,6 +207,42 @@ const VendorDashboard = ({ user, onSignOut }) => {
         )}
 
         {/* Analytics Tab */}
+        {activeTab === 'listing' && (
+          <div>
+            <h1 style={styles.pageTitle}>My Listing</h1>
+            <p style={styles.pageSubtitle}>Update your shop details and improve your Google Maps accuracy</p>
+            <div style={{ background: '#fff', borderRadius: '12px', padding: '1.5rem', border: '0.5px solid #E0D8CC', maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={styles.fieldLabel}>Shop Name</label>
+                <input style={styles.fieldInput} value={shopName} disabled />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={styles.fieldLabel}>Address</label>
+                <input style={styles.fieldInput} placeholder="e.g. 14 Admiralty Way, Lekki Phase 1" value={shopAddress} onChange={e => setShopAddress(e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={styles.fieldLabel}>Phone</label>
+                <input style={styles.fieldInput} placeholder="+234 800 000 0000" value={shopPhone} onChange={e => setShopPhone(e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={styles.fieldLabel}>Opening Hours</label>
+                <input style={styles.fieldInput} placeholder="Mon-Sun 8am-9pm" value={shopHours} onChange={e => setShopHours(e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={styles.fieldLabel}>Google Place ID</label>
+                <input style={styles.fieldInput} placeholder="e.g. ChIJN1t_tDeuEmsRUsoyG83frY4" value={placeId} onChange={e => setPlaceId(e.target.value)} />
+                <p style={{ fontSize: '12px', color: '#AAA', margin: 0 }}>
+                  Find your Place ID at <a href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder" target="_blank" rel="noreferrer" style={{ color: '#C47A2B' }}>Google Place ID Finder</a>. This ensures accurate directions for your customers.
+                </p>
+              </div>
+              {listingMsg && <p style={{ fontSize: '13px', color: listingMsg.startsWith('Error') ? '#C0392B' : '#27AE60', margin: 0 }}>{listingMsg}</p>}
+              <button style={styles.ctaBtn} onClick={saveListingDetails} disabled={listingSaving}>
+                {listingSaving ? 'Saving...' : 'Save Listing Details'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'analytics' && (
           <div>
             <h1 style={styles.pageTitle}>Analytics</h1>
@@ -210,6 +278,8 @@ const styles = {
   nav: { display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 },
   navBtn: { background: 'none', border: 'none', color: '#AAA', fontSize: '14px', padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans', sans-serif" },
   navBtnActive: { background: 'rgba(255,255,255,0.12)', color: '#fff' },
+  fieldLabel: { fontSize: '13px', fontWeight: '500', color: '#444' },
+  fieldInput: { padding: '10px 14px', borderRadius: '8px', border: '1px solid #DDD', fontSize: '14px', fontFamily: "'DM Sans', sans-serif", outline: 'none' },
   signOutBtn: { background: 'none', border: '1px solid #444', color: '#AAA', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontFamily: "'DM Sans', sans-serif" },
   main: { flex: 1, padding: '2.5rem', overflowY: 'auto' },
   pageTitle: { fontSize: '26px', fontWeight: '600', color: '#1C1009', margin: '0 0 4px' },

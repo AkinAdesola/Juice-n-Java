@@ -157,6 +157,33 @@ async def get_reviews(shop_name: str):
 
 # ── STRIPE ──────────────────────────────────────────────────
 
+class ShopUpdateRequest(BaseModel):
+    shop_name: str
+    vendor_email: str
+    google_place_id: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    hours: Optional[str] = None
+
+@api_router.post("/vendor/update-shop")
+async def update_shop(req: ShopUpdateRequest):
+    update_data = {}
+    if req.google_place_id:
+        update_data["google_place_id"] = req.google_place_id
+    if req.address:
+        update_data["address"] = req.address
+    if req.phone:
+        update_data["phone"] = req.phone
+    if req.hours:
+        update_data["hours"] = req.hours
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    result = await db.shops.update_one(
+        {"name": req.shop_name},
+        {"$set": update_data}
+    )
+    return {"updated": result.modified_count > 0}
+
 class CheckoutRequest(BaseModel):
     currency: str
     vendor_email: str

@@ -194,10 +194,10 @@ function ShopModal({ shop, user, onClose, saved, onSave }) {
                 className="btn btn-ghost"
                 style={{ width: '100%', justifyContent: 'center', marginTop: 20 }}
                 onClick={() => {
-                  const dest = shop.latitude && shop.longitude
-                    ? `${shop.latitude},${shop.longitude}`
-                    : encodeURIComponent((shop.address || shop.name) + ' Lagos Nigeria');
-                  window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
+                  const dest = shop.google_place_id
+                    ? `https://www.google.com/maps/place/?q=place_id:${shop.google_place_id}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((shop.address || shop.name) + ' Lagos Nigeria')}`;
+                  window.open(dest, '_blank');
                 }}
               >
                 🗺 Get Directions on Google Maps
