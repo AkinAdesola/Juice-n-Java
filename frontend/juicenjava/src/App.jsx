@@ -200,7 +200,8 @@ function ShopModal({ shop, user, onClose, saved, onSave }) {
 
 // ── Shop Card ─────────────────────────────────────────────────
 function ShopCard({ shop, onSelect, saved, onSave }) {
-  const fallback = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800';
+  const FALLBACKS = { coffee: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80', juice: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?w=600&q=80', smoothie: 'https://images.unsplash.com/photo-1553531384-cc64ac80f931?w=600&q=80', matcha: 'https://images.unsplash.com/photo-1515696955266-4f67e13219e8?w=600&q=80', tea: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=600&q=80', dessert: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=600&q=80' };
+  const fallback = FALLBACKS[shop.category] || FALLBACKS[shop.drink_types] || FALLBACKS.coffee;
   return (
     <div className="shop-card" onClick={() => onSelect(shop)}>
       <div className="shop-card-image" style={{ backgroundImage: `url(${shop.photo_url || shop.image_url || fallback})` }}>
