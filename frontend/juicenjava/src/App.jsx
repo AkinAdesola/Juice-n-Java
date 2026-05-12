@@ -434,6 +434,7 @@ const App = () => {
   const [selectedShop, setSelectedShop] = useState(null);
   const [savedShops, setSavedShops] = useState([]);
   const [discoverCategory, setDiscoverCategory] = useState('all');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -504,6 +505,13 @@ const App = () => {
           <a href="#about" className="navbar-link">🏪 About</a>
           <button className="navbar-link" onClick={() => { if (currentUser && isVendor) setView('vendor-dashboard'); else setAuthModal({ role: 'vendor', mode: 'login' }); }}>📊 Vendors</button>
         </div>
+        <button
+          className={`hamburger ${menuOpen ? 'open' : ''}`}
+          onClick={() => setMenuOpen(m => !m)}
+          aria-label="Toggle menu"
+        >
+          <span /><span /><span />
+        </button>
         <div className="navbar-actions">
           {currentUser ? (
             <>
@@ -518,6 +526,21 @@ const App = () => {
           )}
         </div>
       </nav>
+
+      {/* Mobile Menu */}
+      <div className={`mobile-menu ${menuOpen ? 'open' : ''}`}>
+        <button className="mobile-menu-link" onClick={() => { setView('home'); setMenuOpen(false); }}>📍 Discover</button>
+        <a href="#about" className="mobile-menu-link" onClick={() => setMenuOpen(false)}>🏪 About</a>
+        <button className="mobile-menu-link" onClick={() => { if (currentUser && isVendor) setView('vendor-dashboard'); else setAuthModal({ role: 'vendor', mode: 'login' }); setMenuOpen(false); }}>📊 Vendors</button>
+        {currentUser ? (
+          <button className="mobile-menu-link" onClick={() => { handleSignOut(); setMenuOpen(false); }}>Sign Out</button>
+        ) : (
+          <>
+            <button className="mobile-menu-link" onClick={() => { setAuthModal({ role: 'user', mode: 'login' }); setMenuOpen(false); }}>Sign In</button>
+            <button className="mobile-menu-link" onClick={() => { setAuthModal({ role: 'user', mode: 'signup' }); setMenuOpen(false); }}>Get Started</button>
+          </>
+        )}
+      </div>
 
       {view === 'discover' && (
         <>
