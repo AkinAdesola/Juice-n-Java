@@ -247,11 +247,14 @@ function ShopCard({ shop, onSelect, saved, onSave }) {
 }
 
 // ── Discover Page ─────────────────────────────────────────────
-function DiscoverPage({ shops, onSelect, saved, onSave, initialCategory }) {
+function DiscoverPage({ onSelect, saved, onSave, initialCategory }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(initialCategory || 'all');
   const [sort, setSort] = useState('distance');
   const [showFilters, setShowFilters] = useState(false);
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimer = React.useRef(null);
 
   const categories = ['all', 'coffee', 'matcha', 'tea', 'smoothie', 'juice'];
   const sorts = ['distance', 'rating', 'price', 'popularity'];
@@ -266,11 +269,35 @@ function DiscoverPage({ shops, onSelect, saved, onSave, initialCategory }) {
     transition: 'all 0.18s',
   });
 
-  const filtered = shops.filter(s => {
-    if (category !== 'all' && s.category !== category && s.drink_types !== category) return false;
-    if (search && !s.name.toLowerCase().includes(search.toLowerCase()) && !(s.address || '').toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  }).sort((a, b) => {
+  const fetchResults = React.useCallback(async (q, cat) => {
+    setSearching(true);
+    try {
+      let url = `${API}/shops/discover?lat=6.455&lng=3.384&radius=20`;
+      if (cat && cat !== 'all') url += `&drink_type=${cat}`;
+      if (q) url += `&search=${encodeURIComponent(q)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      setResults(data.shops || []);
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchResults('', initialCategory || 'all');
+  }, [fetchResults, initialCategory]);
+
+  useEffect(() => {
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      fetchResults(search, category);
+    }, 400);
+    return () => clearTimeout(searchTimer.current);
+  }, [search, category, fetchResults]);
+
+  const filtered = results.sort((a, b) => {
     if (sort === 'distance') return (a.distance || 99) - (b.distance || 99);
     if (sort === 'rating') return (b.rating || 0) - (a.rating || 0);
     if (sort === 'price') return (a.price_level || 2) - (b.price_level || 2);
@@ -284,7 +311,7 @@ function DiscoverPage({ shops, onSelect, saved, onSave, initialCategory }) {
           <div style={{ display: 'flex', gap: 10, marginBottom: showFilters ? 20 : 0 }}>
             <div style={{ flex: 1, position: 'relative' }}>
               <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, pointerEvents: 'none' }}>🔍</span>
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search cafés, neighbourhoods, drinks..." className="form-input" style={{ paddingLeft: 42, fontSize: 15 }} />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search cafés, neighbourhoods, drinks..." className="form-input" style={{ paddingLeft: 42, fontSize: 15, paddingRight: searching ? 36 : 14 }} />
             </div>
             <button onClick={() => setShowFilters(f => !f)} className={`btn ${showFilters ? 'btn-espresso' : 'btn-ghost'} btn-sm`}>⚙ Filters</button>
           </div>
@@ -308,7 +335,7 @@ function DiscoverPage({ shops, onSelect, saved, onSave, initialCategory }) {
       </div>
       <div className="container" style={{ paddingTop: 40, paddingBottom: 60 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <h2 style={{ fontSize: 'clamp(22px, 3vw, 32px)' }}>{filtered.length} {filtered.length === 1 ? 'spot' : 'spots'} found</h2>
+          <h2 style={{ fontSize: 'clamp(22px, 3vw, 32px)' }}>{searching ? 'Searching...' : `${filtered.length} ${filtered.length === 1 ? 'spot' : 'spots'} found`}</h2>
           <span style={{ fontSize: 14, color: 'var(--muted-brown)' }}>📍 Lagos</span>
         </div>
         {filtered.length === 0 ? (
@@ -544,7 +571,7 @@ const App = () => {
 
       {view === 'discover' && (
         <>
-          <DiscoverPage shops={shops} onSelect={setSelectedShop} saved={savedShops} onSave={toggleSave} initialCategory={discoverCategory} />
+          <DiscoverPage onSelect={setSelectedShop} saved={savedShops} onSave={toggleSave} initialCategory={discoverCategory} />
           <Footer />
         </>
       )}

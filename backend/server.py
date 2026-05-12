@@ -67,12 +67,18 @@ async def fetch_external_shops(lat, lng, radius):
         return []
 
 @api_router.get("/shops/discover")
-async def discover_shops(lat: float, lng: float, radius: float = 5.0, drink_type: Optional[str] = None):
+async def discover_shops(lat: float, lng: float, radius: float = 5.0, drink_type: Optional[str] = None, search: Optional[str] = None):
     vendor_list = []
     try:
         query = {"status": "active"}
         if drink_type and drink_type != "all":
             query["drink_types"] = drink_type
+        if search:
+            query["$or"] = [
+                {"name": {"$regex": search, "$options": "i"}},
+                {"address": {"$regex": search, "$options": "i"}},
+                {"area": {"$regex": search, "$options": "i"}},
+            ]
         vendors = await asyncio.wait_for(
             db.shops.find(query, {"_id": 0}).to_list(100),
             timeout=3.0
